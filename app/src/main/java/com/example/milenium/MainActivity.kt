@@ -13,19 +13,26 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Favorite
+import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -90,7 +97,9 @@ data class Publication(
     val titulo: String,
     val descripcion: String,
     val imageUri: String? = null,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    val likes: Int = 0,
+    val isLiked: Boolean = false
 )
 
 @Serializable
@@ -119,6 +128,23 @@ class PublicationRepository(private val context: Context) {
     suspend fun savePublication(publication: Publication) {
         val currentList = getAllPublicationsList()
         val updatedList = currentList + publication
+        context.dataStore.edit { preferences ->
+            preferences[publicationsKey] = Json.encodeToString(updatedList)
+        }
+    }
+
+    suspend fun updatePublicationLike(publicationId: Long, isLiked: Boolean) {
+        val currentList = getAllPublicationsList()
+        val updatedList = currentList.map { publication ->
+            if (publication.timestamp == publicationId) {
+                publication.copy(
+                    likes = if (isLiked) publication.likes + 1 else maxOf(0, publication.likes - 1),
+                    isLiked = isLiked
+                )
+            } else {
+                publication
+            }
+        }
         context.dataStore.edit { preferences ->
             preferences[publicationsKey] = Json.encodeToString(updatedList)
         }
@@ -181,7 +207,6 @@ class PublicationRepository(private val context: Context) {
         }
     }
 
-    // Búsqueda combinada de publicaciones y usuarios
     suspend fun searchAllContent(query: String, publications: List<Publication>): SearchResult {
         val userRepository = UserRepository(context)
 
@@ -196,11 +221,9 @@ class PublicationRepository(private val context: Context) {
 }
 
 class UserRepository(private val context: Context) {
-
     private val dataStore = context.dataStore
     private val usersKey = stringPreferencesKey(Constants.USERS_KEY)
 
-    // Usuarios por defecto (se guardarán en DataStore)
     private val defaultUsers = listOf(
         User(
             id = 1,
@@ -220,11 +243,11 @@ class UserRepository(private val context: Context) {
         ),
         User(
             id = 3,
-            nombre = "Ana Martínez",
+            nombre = "Ana López",
             edad = 28,
             profesion = "Ingeniera de Software",
-            descripcion = "Especializada en inteligencia artificial y machine learning.",
-            intereses = listOf("IA", "Ciencia", "Lectura", "Viajes")
+            descripcion = "Especializada en desarrollo backend y arquitectura de sistemas.",
+            intereses = listOf("Programación", "Música", "Viajes")
         ),
         User(
             id = 4,
@@ -284,13 +307,11 @@ class UserRepository(private val context: Context) {
         )
     )
 
-    // Obtener todos los usuarios desde DataStore
     suspend fun getAllUsers(): List<User> {
         val preferences = dataStore.data.first()
         val jsonString = preferences[usersKey]
 
         return if (jsonString.isNullOrBlank()) {
-            // Si no hay datos, guardar los usuarios por defecto
             saveUsers(defaultUsers)
             defaultUsers
         } else {
@@ -298,14 +319,12 @@ class UserRepository(private val context: Context) {
         }
     }
 
-    // Guardar usuarios en DataStore
     private suspend fun saveUsers(users: List<User>) {
         dataStore.edit { preferences ->
             preferences[usersKey] = Json.encodeToString(users)
         }
     }
 
-    // Buscar usuarios
     suspend fun searchUsers(query: String): List<User> {
         if (query.isBlank()) return emptyList()
 
@@ -318,19 +337,16 @@ class UserRepository(private val context: Context) {
         }
     }
 
-    // Obtener usuario por ID
     suspend fun getUserById(id: Int): User? {
         val allUsers = getAllUsers()
         return allUsers.find { it.id == id }
     }
 
-    // Obtener usuarios por rango de edad
     suspend fun getUsersByAgeRange(minAge: Int, maxAge: Int): List<User> {
         val allUsers = getAllUsers()
         return allUsers.filter { it.edad in minAge..maxAge }
     }
 
-    // Agregar nuevo usuario (si quieres permitir registro)
     suspend fun addUser(user: User) {
         val currentUsers = getAllUsers().toMutableList()
         currentUsers.add(user)
@@ -406,26 +422,35 @@ fun AppNavegacion() {
 
     NavHost(
         navController = navController,
-        startDestination = "publicaciones"  // Inicia en publicaciones
+        startDestination = "publicaciones"
     ) {
         composable("publicaciones") {
             HomeScreen(navController = navController)
         }
         composable("crear_publicacion") {
-            CreateScreen(onNavigateBack = { navController.popBackStack() })
+            CreateScreen(
+                navController = navController,
+                onNavigateBack = { navController.popBackStack() }
+            )
         }
-        composable("buscar_publicaciones") {
+        composable("buscar") {
             SearchScreen(onNavigateBack = { navController.popBackStack() })
         }
-
-        // PANTALLAS EN BLANCO (secundarias)
         composable("inicio") {
             PantallaInicio(navController = navController)
         }
-        composable("perfil") { PantallaBlanca("Perfil") }
-        composable("notificaciones") { PantallaBlanca("Notificaciones") }
-        composable("contactanos") { PantallaBlanca("Contáctanos") }
-        composable("configuracion") { PantallaBlanca("Configuración") }
+        composable("perfil") {
+            PantallaBlanca(titulo = "Perfil")
+        }
+        composable("notificaciones") {
+            PantallaBlanca(titulo = "Notificaciones")
+        }
+        composable("contactanos") {
+            PantallaBlanca(titulo = "Contáctanos")
+        }
+        composable("configuracion") {
+            PantallaBlanca(titulo = "Configuración")
+        }
         composable("perfil_usuario/{userId}") { backStackEntry ->
             val userId = backStackEntry.arguments?.getString("userId")?.toIntOrNull() ?: 0
             UserProfileScreen(userId = userId)
@@ -536,10 +561,10 @@ fun HomeScreen(navController: NavHostController) {
                         )
                     },
                     actions = {
-                        IconButton(onClick = { navController.navigate("buscar_publicaciones") }) {
+                        IconButton(onClick = { navController.navigate("buscar") }) {
                             Icon(
                                 imageVector = Icons.Filled.Search,
-                                contentDescription = "Buscar publicaciones"
+                                contentDescription = "Buscar"
                             )
                         }
                     }
@@ -557,7 +582,7 @@ fun HomeScreen(navController: NavHostController) {
                 }
             },
 
-            floatingActionButtonPosition = FabPosition.Center
+            floatingActionButtonPosition = FabPosition.End
         ) { paddingValues ->
             if (publications.isEmpty()) {
                 Box(
@@ -592,20 +617,226 @@ fun HomeScreen(navController: NavHostController) {
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(paddingValues)
-                        .padding(Constants.DEFAULT_PADDING.dp),
-                    verticalArrangement = Arrangement.spacedBy(Constants.MEDIUM_SPACING.dp)
+                        .padding(paddingValues),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     items(publications) { publication ->
-                        PublicationCard(
+                        PublicationCardModern(
                             publication = publication,
                             onDelete = {
                                 scope.launch {
                                     repository.deletePublication(publication)
                                 }
+                            },
+                            onLike = { liked ->
+                                scope.launch {
+                                    repository.updatePublicationLike(publication.timestamp, liked)
+                                }
                             }
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+// =======================================
+// ======== COMPONENTE PUBLICACIÓN =======
+// =======================================
+
+@Composable
+fun PublicationCardModern(
+    publication: Publication,
+    onDelete: () -> Unit,
+    onLike: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var isLiked by remember { mutableStateOf(publication.isLiked) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val imageManager = remember { ImageManager(context) }
+
+    val displayUri = remember(publication.imageUri) {
+        publication.imageUri?.let { imageManager.getDisplayableUri(it) }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Eliminar Publicación") },
+            text = { Text("¿Estás seguro de que quieres eliminar esta publicación? Esta acción no se puede deshacer.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                        onDelete()
+                    }
+                ) {
+                    Text("Eliminar", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDeleteDialog = false }
+                ) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp)
+        ) {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Avatar
+                Surface(
+                    modifier = Modifier.size(40.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "U",
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column {
+                    Text(
+                        text = "Usuario",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = formatDate(publication.timestamp),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                IconButton(
+                    onClick = { showDeleteDialog = true },
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "Opciones",
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Contenido
+            Text(
+                text = publication.titulo,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = publication.descripcion,
+                style = MaterialTheme.typography.bodyMedium
+            )
+
+            // Imagen
+            displayUri?.let { uri ->
+                Spacer(modifier = Modifier.height(16.dp))
+                AsyncImage(
+                    model = uri,
+                    contentDescription = "Imagen de la publicación: ${publication.titulo}",
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(Constants.IMAGE_HEIGHT.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            } ?: run {
+                if (!publication.imageUri.isNullOrBlank()) {
+                    Spacer(modifier = Modifier.height(Constants.MEDIUM_SPACING.dp))
+                    Text(
+                        text = "⚠️ Imagen no disponible",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Footer con acciones
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Botón de Like
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clickable {
+                        isLiked = !isLiked
+                        onLike(isLiked)
+                    }
+                ) {
+                    Icon(
+                        imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Outlined.Favorite,
+                        contentDescription = "Like",
+                        tint = if (isLiked) Color(0xFFFF5252) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        modifier = Modifier.size(20.dp)
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Text(
+                        text = "${publication.likes + if (isLiked && !publication.isLiked) 1 else if (!isLiked && publication.isLiked) -1 else 0}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isLiked) Color(0xFFFF5252) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                }
+
+                // Botón de Compartir
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.clickable { }
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Share,
+                        contentDescription = "Compartir",
+                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        modifier = Modifier.size(20.dp)
+                    )
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Text(
+                        text = "Compartir",
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
             }
         }
@@ -667,115 +898,6 @@ fun PantallaBlanca(titulo: String) {
 // =======================================
 
 @Composable
-fun PublicationCard(
-    publication: Publication,
-    onDelete: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val context = LocalContext.current
-    val imageManager = remember { ImageManager(context) }
-    var showDeleteDialog by remember { mutableStateOf(false) }
-
-    val displayUri = remember(publication.imageUri) {
-        publication.imageUri?.let { imageManager.getDisplayableUri(it) }
-    }
-
-    if (showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Eliminar Publicación") },
-            text = { Text("¿Estás seguro de que quieres eliminar esta publicación? Esta acción no se puede deshacer.") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDeleteDialog = false
-                        onDelete()
-                    }
-                ) {
-                    Text("Eliminar", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = { showDeleteDialog = false }
-                ) {
-                    Text("Cancelar")
-                }
-            }
-        )
-    }
-
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(Constants.DEFAULT_PADDING.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = publication.titulo,
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.weight(1f)
-                )
-
-                IconButton(
-                    onClick = { showDeleteDialog = true },
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Eliminar publicación",
-                        tint = MaterialTheme.colorScheme.error
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(Constants.SMALL_SPACING.dp))
-
-            Text(
-                text = publication.descripcion,
-                style = MaterialTheme.typography.bodyMedium
-            )
-
-            Spacer(modifier = Modifier.height(Constants.SMALL_SPACING.dp))
-
-            Text(
-                text = "Publicado: ${formatDate(publication.timestamp)}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-            )
-
-            displayUri?.let { uri ->
-                Spacer(modifier = Modifier.height(Constants.MEDIUM_SPACING.dp))
-                AsyncImage(
-                    model = uri,
-                    contentDescription = "Imagen de la publicación: ${publication.titulo}",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(Constants.IMAGE_HEIGHT.dp)
-                )
-            } ?: run {
-                if (!publication.imageUri.isNullOrBlank()) {
-                    Spacer(modifier = Modifier.height(Constants.MEDIUM_SPACING.dp))
-                    Text(
-                        text = "⚠️ Imagen no disponible",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
 fun UserCard(
     user: User,
     modifier: Modifier = Modifier
@@ -790,7 +912,7 @@ fun UserCard(
                 .padding(Constants.DEFAULT_PADDING.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Avatar del usuario - VERSIÓN ALTERNATIVA SIN BACKGROUND
+            // Avatar del usuario
             Surface(
                 modifier = Modifier.size(60.dp),
                 shape = CircleShape,
@@ -898,11 +1020,6 @@ fun UserProfileScreen(userId: Int) {
     }
 }
 
-private fun formatDate(timestamp: Long): String {
-    val sdf = SimpleDateFormat("dd/MM/yyyy 'a las' HH:mm", Locale.getDefault())
-    return sdf.format(Date(timestamp))
-}
-
 @Composable
 fun SimpleTopAppBar(
     title: String,
@@ -946,7 +1063,10 @@ fun SimpleTopAppBar(
 // =======================================
 
 @Composable
-fun CreateScreen(onNavigateBack: () -> Unit) {
+fun CreateScreen(
+    navController: NavHostController,
+    onNavigateBack: () -> Unit
+) {
     val context = LocalContext.current
     val repository = remember { PublicationRepository(context) }
     val imageManager = remember { ImageManager(context) }
@@ -1055,6 +1175,8 @@ fun CreateScreen(onNavigateBack: () -> Unit) {
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(Constants.IMAGE_HEIGHT.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.Crop
                 )
             }
 
@@ -1070,7 +1192,9 @@ fun CreateScreen(onNavigateBack: () -> Unit) {
                                 titulo = titulo.trim(),
                                 descripcion = descripcion.trim(),
                                 imageUri = imageUriString,
-                                timestamp = System.currentTimeMillis()
+                                timestamp = System.currentTimeMillis(),
+                                likes = 0,
+                                isLiked = false
                             )
                         )
                         message = "✅ Publicación guardada correctamente"
@@ -1113,7 +1237,6 @@ fun SearchScreen(onNavigateBack: () -> Unit) {
     var searchResults by remember { mutableStateOf(SearchResult(emptyList(), emptyList())) }
     var isLoading by remember { mutableStateOf(false) }
 
-    // Efecto para buscar cuando cambia el query
     LaunchedEffect(searchQuery) {
         if (searchQuery.isNotBlank()) {
             isLoading = true
@@ -1237,11 +1360,16 @@ fun SearchScreen(onNavigateBack: () -> Unit) {
                                 )
                             }
                             items(searchResults.publications) { publication ->
-                                PublicationCard(
+                                PublicationCardModern(
                                     publication = publication,
                                     onDelete = {
                                         scope.launch {
                                             repository.deletePublication(publication)
+                                        }
+                                    },
+                                    onLike = { liked ->
+                                        scope.launch {
+                                            repository.updatePublicationLike(publication.timestamp, liked)
                                         }
                                     }
                                 )
@@ -1252,6 +1380,15 @@ fun SearchScreen(onNavigateBack: () -> Unit) {
             }
         }
     }
+}
+
+// =======================================
+// ============= UTILITIES ===============
+// =======================================
+
+private fun formatDate(timestamp: Long): String {
+    val sdf = SimpleDateFormat("dd/MM/yyyy 'a las' HH:mm", Locale.getDefault())
+    return sdf.format(Date(timestamp))
 }
 
 // =======================================
@@ -1270,7 +1407,10 @@ fun HomeScreenPreview() {
 @Composable
 fun CreateScreenPreview() {
     MaterialTheme {
-        CreateScreen(onNavigateBack = {})
+        CreateScreen(
+            navController = rememberNavController(),
+            onNavigateBack = {}
+        )
     }
 }
 
@@ -1286,14 +1426,17 @@ fun SearchScreenPreview() {
 @Composable
 fun PublicationCardPreview() {
     MaterialTheme {
-        PublicationCard(
+        PublicationCardModern(
             publication = Publication(
                 titulo = "Mi primera publicación",
                 descripcion = "Esta es una descripción de ejemplo para mostrar cómo se vería una publicación en la aplicación.",
                 imageUri = null,
-                timestamp = System.currentTimeMillis()
+                timestamp = System.currentTimeMillis(),
+                likes = 5,
+                isLiked = true
             ),
-            onDelete = { }
+            onDelete = { },
+            onLike = { }
         )
     }
 }
