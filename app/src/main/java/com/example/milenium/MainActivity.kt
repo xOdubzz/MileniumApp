@@ -40,6 +40,23 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.milenium.ui.theme.MileniumTheme
 import kotlinx.coroutines.launch
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Shapes
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.unit.dp
+
+
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -85,10 +102,13 @@ fun PantallaInicio(navController: NavController) {
         drawerContent = {
             ModalDrawerSheet {
 
+
+
                 Text(
                     text = "Menú",
                     style = MaterialTheme.typography.headlineSmall,
                     modifier = Modifier.padding(16.dp)
+                        .fillMaxWidth()
                 )
 
                 NavigationDrawerItem(
@@ -126,6 +146,7 @@ fun PantallaInicio(navController: NavController) {
         Scaffold(
             topBar = {
                 CenterAlignedTopAppBar(
+
                     navigationIcon = {
                         IconButton(onClick = {
                             scope.launch { drawerState.open() }
@@ -137,15 +158,16 @@ fun PantallaInicio(navController: NavController) {
                         }
                     },
                     title = {
-                        // EL LOGO (BOTÓN)
-                        Text(
-                            "LOGO",
-                            modifier = Modifier.clickable {
-                                navController.navigate("inicio")
-                            }
+                        Image(
+                            painter = painterResource(id = R.drawable.logo2),   // ← tu imagen
+                            contentDescription = "Logo de la app",
+                            modifier = Modifier
+                                .size(60.dp)
+                                .clickable { navController.navigate("inicio") }
                         )
                     },
-                    actions = {
+
+                            actions = {
                         IconButton(onClick = { navController.navigate("busqueda") }) {
                             Icon(
                                 imageVector = Icons.Filled.Search,
