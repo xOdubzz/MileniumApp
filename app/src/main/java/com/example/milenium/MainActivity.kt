@@ -8,6 +8,9 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,14 +18,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Favorite
 import androidx.compose.material.icons.outlined.Share
 import androidx.compose.material3.*
@@ -31,13 +27,18 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import androidx.navigation.NavController
 import androidx.navigation.NavHostController
@@ -61,12 +62,61 @@ import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
+// =======================================
+// ========= PALETA DE COLORES MORADA ====
+// =======================================
+
+private object PurpleTheme {
+    val PrimaryPurple = Color(0xFF8B5FBF)
+    val PrimaryLight = Color(0xFFB39DDB)
+    val PrimaryDark = Color(0xFF6A0DAD)
+    val SecondaryPurple = Color(0xFF9C27B0)
+    val AccentPurple = Color(0xFFE1BEE7)
+    val SurfacePurple = Color(0xFFF3E5F5)
+    val BackgroundPurple = Color(0xFFEDE7F6)
+    val TextPurple = Color(0xFF4A148C)
+
+    // Gradientes morados
+    val PurpleGradient = Brush.verticalGradient(
+        colors = listOf(PrimaryPurple, PrimaryDark)
+    )
+    val LightPurpleGradient = Brush.verticalGradient(
+        colors = listOf(SurfacePurple, BackgroundPurple)
+    )
+    val CardGradient = Brush.linearGradient(
+        colors = listOf(Color(0xFFF3E5F5), Color(0xFFEDE7F6))
+    )
+    val ButtonGradient = Brush.horizontalGradient(
+        colors = listOf(PrimaryPurple, SecondaryPurple)
+    )
+}
+
+// Tema morado personalizado
+private val PurpleColorScheme = lightColorScheme(
+    primary = PurpleTheme.PrimaryPurple,
+    onPrimary = Color.White,
+    primaryContainer = PurpleTheme.SurfacePurple,
+    onPrimaryContainer = PurpleTheme.PrimaryDark,
+    secondary = PurpleTheme.SecondaryPurple,
+    onSecondary = Color.White,
+    secondaryContainer = PurpleTheme.AccentPurple,
+    onSecondaryContainer = PurpleTheme.PrimaryDark,
+    background = PurpleTheme.BackgroundPurple,
+    onBackground = PurpleTheme.TextPurple,
+    surface = PurpleTheme.SurfacePurple,
+    onSurface = PurpleTheme.TextPurple,
+    surfaceVariant = Color(0xFFE1BEE7),
+    onSurfaceVariant = PurpleTheme.PrimaryDark
+)
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MaterialTheme {
+            MaterialTheme(
+                colorScheme = PurpleColorScheme
+            ) {
                 AppNavegacion()
             }
         }
@@ -436,20 +486,17 @@ fun AppNavegacion() {
         composable("buscar") {
             SearchScreen(onNavigateBack = { navController.popBackStack() })
         }
-        composable("inicio") {
-            PantallaInicio(navController = navController)
-        }
         composable("perfil") {
-            PantallaBlanca(titulo = "Perfil")
+            SimpleProfileScreen(onBack = { navController.popBackStack() })
         }
         composable("notificaciones") {
-            PantallaBlanca(titulo = "Notificaciones")
+            NotificationScreenStyle(onBack = { navController.popBackStack() })
         }
         composable("contactanos") {
-            PantallaBlanca(titulo = "Contáctanos")
+            ContactanosScreen(navController = navController)
         }
         composable("configuracion") {
-            PantallaBlanca(titulo = "Configuración")
+            ConfiguracionScreen(navController = navController)
         }
         composable("perfil_usuario/{userId}") { backStackEntry ->
             val userId = backStackEntry.arguments?.getString("userId")?.toIntOrNull() ?: 0
@@ -476,65 +523,89 @@ fun HomeScreen(navController: NavHostController) {
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            ModalDrawerSheet {
+            ModalDrawerSheet(
+                modifier = Modifier.background(PurpleTheme.BackgroundPurple)
+            ) {
                 Text(
                     text = "Menú",
                     style = MaterialTheme.typography.headlineSmall,
-                    modifier = Modifier.padding(16.dp)
+                    modifier = Modifier.padding(16.dp),
+                    color = PurpleTheme.PrimaryDark
                 )
 
                 NavigationDrawerItem(
-                    label = { Text("Inicio") },
-                    selected = false,
-                    onClick = {
-                        navController.navigate("inicio")
-                        scopeDrawer.launch { drawerState.close() }
-                    }
-                )
-
-                NavigationDrawerItem(
-                    label = { Text("Publicaciones") },
+                    label = {
+                        Text("Publicaciones", color = PurpleTheme.PrimaryDark)
+                    },
                     selected = true,
                     onClick = {
                         navController.navigate("publicaciones")
                         scopeDrawer.launch { drawerState.close() }
-                    }
+                    },
+                    colors = NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = PurpleTheme.SurfacePurple,
+                        unselectedContainerColor = Color.Transparent
+                    )
                 )
 
                 NavigationDrawerItem(
-                    label = { Text("Perfil") },
+                    label = {
+                        Text("Perfil", color = PurpleTheme.PrimaryDark)
+                    },
                     selected = false,
                     onClick = {
                         navController.navigate("perfil")
                         scopeDrawer.launch { drawerState.close() }
-                    }
+                    },
+                    colors = NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = PurpleTheme.SurfacePurple,
+                        unselectedContainerColor = Color.Transparent
+                    )
                 )
 
                 NavigationDrawerItem(
-                    label = { Text("Notificaciones") },
+                    label = {
+                        Text("Notificaciones", color = PurpleTheme.PrimaryDark)
+                    },
                     selected = false,
                     onClick = {
                         navController.navigate("notificaciones")
                         scopeDrawer.launch { drawerState.close() }
-                    }
+                    },
+                    colors = NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = PurpleTheme.SurfacePurple,
+                        unselectedContainerColor = Color.Transparent
+                    )
                 )
 
                 NavigationDrawerItem(
-                    label = { Text("Contáctanos") },
+                    label = {
+                        Text("Contáctanos", color = PurpleTheme.PrimaryDark)
+                    },
                     selected = false,
                     onClick = {
                         navController.navigate("contactanos")
                         scopeDrawer.launch { drawerState.close() }
-                    }
+                    },
+                    colors = NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = PurpleTheme.SurfacePurple,
+                        unselectedContainerColor = Color.Transparent
+                    )
                 )
 
                 NavigationDrawerItem(
-                    label = { Text("Configuración") },
+                    label = {
+                        Text("Configuración", color = PurpleTheme.PrimaryDark)
+                    },
                     selected = false,
                     onClick = {
                         navController.navigate("configuracion")
                         scopeDrawer.launch { drawerState.close() }
-                    }
+                    },
+                    colors = NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = PurpleTheme.SurfacePurple,
+                        unselectedContainerColor = Color.Transparent
+                    )
                 )
             }
         }
@@ -548,32 +619,40 @@ fun HomeScreen(navController: NavHostController) {
                         }) {
                             Icon(
                                 imageVector = Icons.Filled.Menu,
-                                contentDescription = "Menú"
+                                contentDescription = "Menú",
+                                tint = Color.White
                             )
                         }
                     },
                     title = {
-                        Text(
-                            "MILENIUM",
-                            modifier = Modifier.clickable {
-                                navController.navigate("publicaciones")
-                            }
+                        Image(
+                            painter = painterResource(id = R.drawable.logo2),
+                            contentDescription = "Logo Milenium",
+                            modifier = Modifier
+                                .size(60.dp)
+                                .clickable { navController.navigate("publicaciones") }
                         )
                     },
                     actions = {
                         IconButton(onClick = { navController.navigate("buscar") }) {
                             Icon(
                                 imageVector = Icons.Filled.Search,
-                                contentDescription = "Buscar"
+                                contentDescription = "Buscar",
+                                tint = Color.White
                             )
                         }
-                    }
+                    },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = PurpleTheme.PrimaryPurple
+                    )
                 )
             },
 
             floatingActionButton = {
                 FloatingActionButton(
-                    onClick = { navController.navigate("crear_publicacion") }
+                    onClick = { navController.navigate("crear_publicacion") },
+                    containerColor = PurpleTheme.PrimaryPurple,
+                    contentColor = Color.White
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Add,
@@ -582,58 +661,67 @@ fun HomeScreen(navController: NavHostController) {
                 }
             },
 
-            floatingActionButtonPosition = FabPosition.End
+            floatingActionButtonPosition = FabPosition.Center
         ) { paddingValues ->
-            if (publications.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(PurpleTheme.BackgroundPurple)
+            ) {
+                if (publications.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "No hay publicaciones",
-                            modifier = Modifier.size(64.dp)
-                        )
-                        Spacer(modifier = Modifier.height(Constants.MEDIUM_SPACING.dp))
-                        Text(
-                            text = "No hay publicaciones",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Spacer(modifier = Modifier.height(Constants.SMALL_SPACING.dp))
-                        Text(
-                            text = "Haz clic en el botón + para crear tu primera publicación",
-                            style = MaterialTheme.typography.bodyMedium,
-                            textAlign = TextAlign.Center
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "No hay publicaciones",
+                                modifier = Modifier.size(64.dp),
+                                tint = PurpleTheme.PrimaryPurple
+                            )
+                            Spacer(modifier = Modifier.height(Constants.MEDIUM_SPACING.dp))
+                            Text(
+                                text = "No hay publicaciones",
+                                style = MaterialTheme.typography.titleMedium,
+                                color = PurpleTheme.PrimaryDark
+                            )
+                            Spacer(modifier = Modifier.height(Constants.SMALL_SPACING.dp))
+                            Text(
+                                text = "Haz clic en el botón + para crear tu primera publicación",
+                                style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.Center,
+                                color = PurpleTheme.PrimaryDark
+                            )
+                        }
                     }
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(publications) { publication ->
-                        PublicationCardModern(
-                            publication = publication,
-                            onDelete = {
-                                scope.launch {
-                                    repository.deletePublication(publication)
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(paddingValues),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(publications) { publication ->
+                            PublicationCardModern(
+                                publication = publication,
+                                onDelete = {
+                                    scope.launch {
+                                        repository.deletePublication(publication)
+                                    }
+                                },
+                                onLike = { liked ->
+                                    scope.launch {
+                                        repository.updatePublicationLike(publication.timestamp, liked)
+                                    }
                                 }
-                            },
-                            onLike = { liked ->
-                                scope.launch {
-                                    repository.updatePublicationLike(publication.timestamp, liked)
-                                }
-                            }
-                        )
+                            )
+                        }
                     }
                 }
             }
@@ -664,8 +752,12 @@ fun PublicationCardModern(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Eliminar Publicación") },
-            text = { Text("¿Estás seguro de que quieres eliminar esta publicación? Esta acción no se puede deshacer.") },
+            title = {
+                Text("Eliminar Publicación", color = PurpleTheme.PrimaryDark)
+            },
+            text = {
+                Text("¿Estás seguro de que quieres eliminar esta publicación? Esta acción no se puede deshacer.")
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -673,29 +765,39 @@ fun PublicationCardModern(
                         onDelete()
                     }
                 ) {
-                    Text("Eliminar", color = MaterialTheme.colorScheme.error)
+                    Text("Eliminar", color = PurpleTheme.PrimaryPurple)
                 }
             },
             dismissButton = {
                 TextButton(
                     onClick = { showDeleteDialog = false }
                 ) {
-                    Text("Cancelar")
+                    Text("Cancelar", color = PurpleTheme.PrimaryDark)
                 }
-            }
+            },
+            containerColor = PurpleTheme.SurfacePurple
         )
     }
 
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(16.dp),
+                clip = false
+            ),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        shape = RoundedCornerShape(16.dp)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = PurpleTheme.SurfacePurple
+        )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .background(PurpleTheme.CardGradient)
                 .padding(20.dp)
         ) {
             // Header
@@ -703,18 +805,23 @@ fun PublicationCardModern(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Avatar
+                // Avatar con gradiente morado
                 Surface(
                     modifier = Modifier.size(40.dp),
                     shape = RoundedCornerShape(20.dp),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                    color = Color.Transparent
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier
+                            .background(PurpleTheme.PurpleGradient)
+                            .fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
                         Text(
                             text = "U",
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
+                            color = Color.White
                         )
                     }
                 }
@@ -725,12 +832,13 @@ fun PublicationCardModern(
                     Text(
                         text = "Usuario",
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        color = PurpleTheme.PrimaryDark
                     )
                     Text(
                         text = formatDate(publication.timestamp),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        color = PurpleTheme.PrimaryDark.copy(alpha = 0.6f)
                     )
                 }
 
@@ -743,7 +851,7 @@ fun PublicationCardModern(
                     Icon(
                         imageVector = Icons.Default.MoreVert,
                         contentDescription = "Opciones",
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        tint = PurpleTheme.PrimaryDark
                     )
                 }
             }
@@ -755,14 +863,15 @@ fun PublicationCardModern(
                 text = publication.titulo,
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
+                color = PurpleTheme.PrimaryDark
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
                 text = publication.descripcion,
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                color = PurpleTheme.PrimaryDark.copy(alpha = 0.8f)
             )
 
             // Imagen
@@ -774,7 +883,12 @@ fun PublicationCardModern(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(Constants.IMAGE_HEIGHT.dp)
-                        .clip(RoundedCornerShape(12.dp)),
+                        .clip(RoundedCornerShape(12.dp))
+                        .border(
+                            2.dp,
+                            PurpleTheme.PrimaryLight.copy(alpha = 0.3f),
+                            RoundedCornerShape(12.dp)
+                        ),
                     contentScale = ContentScale.Crop
                 )
             } ?: run {
@@ -783,7 +897,7 @@ fun PublicationCardModern(
                     Text(
                         text = "⚠️ Imagen no disponible",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
+                        color = PurpleTheme.PrimaryPurple
                     )
                 }
             }
@@ -806,7 +920,7 @@ fun PublicationCardModern(
                     Icon(
                         imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Outlined.Favorite,
                         contentDescription = "Like",
-                        tint = if (isLiked) Color(0xFFFF5252) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        tint = if (isLiked) PurpleTheme.PrimaryPurple else PurpleTheme.PrimaryDark.copy(alpha = 0.6f),
                         modifier = Modifier.size(20.dp)
                     )
 
@@ -815,7 +929,7 @@ fun PublicationCardModern(
                     Text(
                         text = "${publication.likes + if (isLiked && !publication.isLiked) 1 else if (!isLiked && publication.isLiked) -1 else 0}",
                         style = MaterialTheme.typography.bodySmall,
-                        color = if (isLiked) Color(0xFFFF5252) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        color = if (isLiked) PurpleTheme.PrimaryPurple else PurpleTheme.PrimaryDark.copy(alpha = 0.6f)
                     )
                 }
 
@@ -827,7 +941,7 @@ fun PublicationCardModern(
                     Icon(
                         imageVector = Icons.Outlined.Share,
                         contentDescription = "Compartir",
-                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        tint = PurpleTheme.PrimaryDark.copy(alpha = 0.6f),
                         modifier = Modifier.size(20.dp)
                     )
 
@@ -835,44 +949,10 @@ fun PublicationCardModern(
 
                     Text(
                         text = "Compartir",
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
+                        color = PurpleTheme.PrimaryDark
                     )
                 }
-            }
-        }
-    }
-}
-
-// =======================================
-// ======= PANTALLA INICIO SECUNDARIA ====
-// =======================================
-
-@Composable
-fun PantallaInicio(navController: NavController) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = "Bienvenido a Milenium",
-                style = MaterialTheme.typography.headlineLarge
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Esta es la pantalla de inicio secundaria",
-                style = MaterialTheme.typography.bodyMedium
-            )
-            Spacer(modifier = Modifier.height(24.dp))
-            Button(
-                onClick = { navController.navigate("publicaciones") }
-            ) {
-                Text("Ir a Publicaciones")
             }
         }
     }
@@ -903,29 +983,36 @@ fun UserCard(
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier.fillMaxWidth(),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        modifier = modifier
+            .fillMaxWidth()
+            .shadow(4.dp, RoundedCornerShape(12.dp)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = PurpleTheme.SurfacePurple
+        )
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .background(PurpleTheme.CardGradient)
                 .padding(Constants.DEFAULT_PADDING.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Avatar del usuario
+            // Avatar del usuario con gradiente morado
             Surface(
                 modifier = Modifier.size(60.dp),
                 shape = CircleShape,
-                color = MaterialTheme.colorScheme.primaryContainer
+                color = Color.Transparent
             ) {
                 Box(
+                    modifier = Modifier.background(PurpleTheme.PurpleGradient),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = user.nombre.take(2).uppercase(),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                        color = Color.White
                     )
                 }
             }
@@ -939,7 +1026,8 @@ fun UserCard(
                 Text(
                     text = user.nombre,
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Bold,
+                    color = PurpleTheme.PrimaryDark
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -947,7 +1035,7 @@ fun UserCard(
                 Text(
                     text = "${user.edad} años • ${user.profesion}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    color = PurpleTheme.PrimaryDark.copy(alpha = 0.7f)
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -955,7 +1043,8 @@ fun UserCard(
                 Text(
                     text = user.descripcion,
                     style = MaterialTheme.typography.bodySmall,
-                    maxLines = 2
+                    maxLines = 2,
+                    color = PurpleTheme.TextPurple
                 )
 
                 Spacer(modifier = Modifier.height(4.dp))
@@ -965,7 +1054,7 @@ fun UserCard(
                     Text(
                         text = "Intereses: ${user.intereses.joinToString(", ")}",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary
+                        color = PurpleTheme.PrimaryPurple
                     )
                 }
             }
@@ -985,7 +1074,11 @@ fun UserProfileScreen(userId: Int) {
         isLoading = false
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(PurpleTheme.BackgroundPurple)
+    ) {
         SimpleTopAppBar(
             title = "Perfil de Usuario",
             onBackClick = { /* Manejar navegación back */ }
@@ -996,14 +1089,14 @@ fun UserProfileScreen(userId: Int) {
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator()
+                CircularProgressIndicator(color = PurpleTheme.PrimaryPurple)
             }
         } else if (user == null) {
             Box(
                 modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Usuario no encontrado")
+                Text("Usuario no encontrado", color = PurpleTheme.PrimaryDark)
             }
         } else {
             LazyColumn(
@@ -1030,6 +1123,7 @@ fun SimpleTopAppBar(
         modifier = Modifier
             .fillMaxWidth()
             .height(64.dp)
+            .background(PurpleTheme.PrimaryPurple)
             .padding(horizontal = Constants.DEFAULT_PADDING.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
@@ -1038,7 +1132,8 @@ fun SimpleTopAppBar(
             IconButton(onClick = onBackClick) {
                 Icon(
                     imageVector = Icons.Default.ArrowBack,
-                    contentDescription = "Volver"
+                    contentDescription = "Volver",
+                    tint = Color.White
                 )
             }
         } else {
@@ -1049,7 +1144,8 @@ fun SimpleTopAppBar(
             text = title,
             style = MaterialTheme.typography.headlineSmall,
             modifier = Modifier.weight(1f),
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            color = Color.White
         )
 
         Row {
@@ -1105,13 +1201,17 @@ fun CreateScreen(
         }
     )
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(PurpleTheme.BackgroundPurple)
+    ) {
         SimpleTopAppBar(
             title = "Crear Publicación",
             onBackClick = onNavigateBack
         )
 
-        Divider()
+        Divider(color = PurpleTheme.PrimaryLight)
 
         Column(
             modifier = Modifier
@@ -1121,9 +1221,15 @@ fun CreateScreen(
             OutlinedTextField(
                 value = titulo,
                 onValueChange = { titulo = it },
-                label = { Text("Título") },
+                label = { Text("Título", color = PurpleTheme.PrimaryDark) },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = PurpleTheme.SurfacePurple,
+                    unfocusedContainerColor = PurpleTheme.SurfacePurple,
+                    focusedBorderColor = PurpleTheme.PrimaryPurple,
+                    unfocusedBorderColor = PurpleTheme.PrimaryLight,
+                )
             )
 
             Spacer(modifier = Modifier.height(Constants.MEDIUM_SPACING.dp))
@@ -1131,18 +1237,25 @@ fun CreateScreen(
             OutlinedTextField(
                 value = descripcion,
                 onValueChange = { descripcion = it },
-                label = { Text("Descripción") },
+                label = { Text("Descripción", color = PurpleTheme.PrimaryDark) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(120.dp),
-                maxLines = 5
+                maxLines = 5,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = PurpleTheme.SurfacePurple,
+                    unfocusedContainerColor = PurpleTheme.SurfacePurple,
+                    focusedBorderColor = PurpleTheme.PrimaryPurple,
+                    unfocusedBorderColor = PurpleTheme.PrimaryLight,
+                )
             )
 
             Spacer(modifier = Modifier.height(Constants.MEDIUM_SPACING.dp))
 
             Text(
                 text = "Seleccionar imagen:",
-                style = MaterialTheme.typography.labelLarge
+                style = MaterialTheme.typography.labelLarge,
+                color = PurpleTheme.PrimaryDark
             )
 
             Spacer(modifier = Modifier.height(Constants.SMALL_SPACING.dp))
@@ -1151,19 +1264,29 @@ fun CreateScreen(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                Button(onClick = {
-                    galleryLauncher.launch("image/*")
-                }) {
-                    Text("Galería")
+                Button(
+                    onClick = {
+                        galleryLauncher.launch("image/*")
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = PurpleTheme.PrimaryPurple
+                    )
+                ) {
+                    Text("Galería", color = Color.White)
                 }
 
-                Button(onClick = {
-                    val photoFile = imageManager.createImageFile()
-                    currentPhotoFile = photoFile
-                    val photoUri = imageManager.getPersistentUri(photoFile)
-                    cameraLauncher.launch(photoUri)
-                }) {
-                    Text("Cámara")
+                Button(
+                    onClick = {
+                        val photoFile = imageManager.createImageFile()
+                        currentPhotoFile = photoFile
+                        val photoUri = imageManager.getPersistentUri(photoFile)
+                        cameraLauncher.launch(photoUri)
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = PurpleTheme.SecondaryPurple
+                    )
+                ) {
+                    Text("Cámara", color = Color.White)
                 }
             }
 
@@ -1175,7 +1298,12 @@ fun CreateScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(Constants.IMAGE_HEIGHT.dp)
-                        .clip(RoundedCornerShape(12.dp)),
+                        .clip(RoundedCornerShape(12.dp))
+                        .border(
+                            2.dp,
+                            PurpleTheme.PrimaryLight,
+                            RoundedCornerShape(12.dp)
+                        ),
                     contentScale = ContentScale.Crop
                 )
             }
@@ -1208,9 +1336,13 @@ fun CreateScreen(
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-                enabled = isFormValid
+                enabled = isFormValid,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = PurpleTheme.PrimaryPurple,
+                    disabledContainerColor = PurpleTheme.PrimaryLight
+                )
             ) {
-                Text("Guardar Publicación")
+                Text("Guardar Publicación", color = Color.White)
             }
 
             Spacer(modifier = Modifier.height(Constants.MEDIUM_SPACING.dp))
@@ -1219,7 +1351,7 @@ fun CreateScreen(
                 Text(
                     text = message,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.primary
+                    color = PurpleTheme.PrimaryPurple
                 )
             }
         }
@@ -1248,13 +1380,17 @@ fun SearchScreen(onNavigateBack: () -> Unit) {
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(PurpleTheme.BackgroundPurple)
+    ) {
         SimpleTopAppBar(
             title = "Buscar",
             onBackClick = onNavigateBack
         )
 
-        Divider()
+        Divider(color = PurpleTheme.PrimaryLight)
 
         Column(
             modifier = Modifier
@@ -1264,10 +1400,16 @@ fun SearchScreen(onNavigateBack: () -> Unit) {
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { searchQuery = it },
-                label = { Text("Buscar publicaciones y usuarios") },
+                label = { Text("Buscar publicaciones y usuarios", color = PurpleTheme.PrimaryDark) },
                 placeholder = { Text("Buscar por título, descripción, nombre, profesión...") },
                 modifier = Modifier.fillMaxWidth(),
-                singleLine = true
+                singleLine = true,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = PurpleTheme.SurfacePurple,
+                    unfocusedContainerColor = PurpleTheme.SurfacePurple,
+                    focusedBorderColor = PurpleTheme.PrimaryPurple,
+                    unfocusedBorderColor = PurpleTheme.PrimaryLight,
+                )
             )
 
             Spacer(modifier = Modifier.height(Constants.MEDIUM_SPACING.dp))
@@ -1280,7 +1422,7 @@ fun SearchScreen(onNavigateBack: () -> Unit) {
                             .weight(1f),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator()
+                        CircularProgressIndicator(color = PurpleTheme.PrimaryPurple)
                     }
                 }
                 searchQuery.isBlank() -> {
@@ -1293,7 +1435,8 @@ fun SearchScreen(onNavigateBack: () -> Unit) {
                         Text(
                             text = "Escribe en el buscador para encontrar publicaciones y usuarios",
                             style = MaterialTheme.typography.bodyMedium,
-                            textAlign = TextAlign.Center
+                            textAlign = TextAlign.Center,
+                            color = PurpleTheme.PrimaryDark
                         )
                     }
                 }
@@ -1306,7 +1449,8 @@ fun SearchScreen(onNavigateBack: () -> Unit) {
                     ) {
                         Text(
                             text = "No se encontraron resultados para \"$searchQuery\"",
-                            style = MaterialTheme.typography.bodyMedium
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = PurpleTheme.PrimaryDark
                         )
                     }
                 }
@@ -1314,14 +1458,15 @@ fun SearchScreen(onNavigateBack: () -> Unit) {
                     // Mostrar estadísticas de búsqueda
                     Text(
                         text = "Resultados para \"$searchQuery\":",
-                        style = MaterialTheme.typography.labelLarge
+                        style = MaterialTheme.typography.labelLarge,
+                        color = PurpleTheme.PrimaryDark
                     )
 
                     if (searchResults.publications.isNotEmpty() || searchResults.users.isNotEmpty()) {
                         Text(
                             text = "${searchResults.publications.size} publicaciones • ${searchResults.users.size} usuarios",
                             style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.primary
+                            color = PurpleTheme.PrimaryPurple
                         )
                     }
 
@@ -1337,7 +1482,8 @@ fun SearchScreen(onNavigateBack: () -> Unit) {
                                 Text(
                                     text = "Usuarios (${searchResults.users.size})",
                                     style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.Bold,
+                                    color = PurpleTheme.PrimaryDark
                                 )
                             }
                             items(searchResults.users) { user ->
@@ -1356,7 +1502,8 @@ fun SearchScreen(onNavigateBack: () -> Unit) {
                                 Text(
                                     text = "Publicaciones (${searchResults.publications.size})",
                                     style = MaterialTheme.typography.titleSmall,
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.Bold,
+                                    color = PurpleTheme.PrimaryDark
                                 )
                             }
                             items(searchResults.publications) { publication ->
@@ -1383,6 +1530,481 @@ fun SearchScreen(onNavigateBack: () -> Unit) {
 }
 
 // =======================================
+// ===== PANTALLAS MEJORADAS =============
+// =======================================
+
+// ==================== PANTALLA CONFIGURACIÓN MEJORADA ====================
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ConfiguracionScreen(navController: NavController) {
+    var notificationsEnabled by remember { mutableStateOf(true) }
+    var isDarkMode by remember { mutableStateOf(false) }
+    var selectedLanguage by remember { mutableStateOf("Español") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(PurpleTheme.BackgroundPurple)
+    ) {
+        SimpleTopAppBar(
+            title = "Configuración",
+            onBackClick = { navController.popBackStack() }
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+            // MODO OSCURO
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    "Modo Oscuro",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = PurpleTheme.PrimaryDark
+                )
+                Spacer(Modifier.weight(1f))
+                Switch(
+                    checked = isDarkMode,
+                    onCheckedChange = { isDarkMode = it },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = PurpleTheme.PrimaryPurple,
+                        uncheckedThumbColor = PurpleTheme.PrimaryLight,
+                        uncheckedTrackColor = PurpleTheme.SurfacePurple
+                    )
+                )
+            }
+
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 8.dp),
+                color = PurpleTheme.PrimaryLight
+            )
+
+            // IDIOMA
+            Text(
+                "Idioma",
+                style = MaterialTheme.typography.bodyLarge,
+                color = PurpleTheme.PrimaryDark
+            )
+            Spacer(Modifier.height(8.dp))
+            var expanded by remember { mutableStateOf(false) }
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = !expanded }
+            ) {
+                TextField(
+                    readOnly = true,
+                    value = selectedLanguage,
+                    onValueChange = { },
+                    label = { Text("Seleccionar idioma") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = PurpleTheme.SurfacePurple,
+                        unfocusedContainerColor = PurpleTheme.SurfacePurple,
+                        focusedIndicatorColor = PurpleTheme.PrimaryPurple,
+                        unfocusedIndicatorColor = PurpleTheme.PrimaryLight,
+                    ),
+                    modifier = Modifier.menuAnchor().fillMaxWidth()
+                )
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    listOf("Español", "English").forEach { lang ->
+                        DropdownMenuItem(
+                            text = { Text(lang, color = PurpleTheme.PrimaryDark) },
+                            onClick = {
+                                selectedLanguage = lang
+                                expanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 8.dp),
+                color = PurpleTheme.PrimaryLight
+            )
+
+            // NOTIFICACIONES
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    "Notificaciones",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = PurpleTheme.PrimaryDark
+                )
+                Spacer(Modifier.weight(1f))
+                Switch(
+                    checked = notificationsEnabled,
+                    onCheckedChange = { notificationsEnabled = it },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = Color.White,
+                        checkedTrackColor = PurpleTheme.PrimaryPurple,
+                        uncheckedThumbColor = PurpleTheme.PrimaryLight,
+                        uncheckedTrackColor = PurpleTheme.SurfacePurple
+                    )
+                )
+            }
+
+            Spacer(Modifier.height(32.dp))
+
+            Button(
+                onClick = { navController.popBackStack() },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = PurpleTheme.PrimaryPurple
+                )
+            ) {
+                Text("Volver a inicio", color = Color.White)
+            }
+        }
+    }
+}
+
+// ==================== PANTALLA CONTÁCTANOS MEJORADA ====================
+@Composable
+fun ContactanosScreen(navController: NavController) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(PurpleTheme.BackgroundPurple)
+    ) {
+        SimpleTopAppBar(
+            title = "Contáctanos",
+            onBackClick = { navController.popBackStack() }
+        )
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            ContactItem(
+                icon = Icons.Filled.Phone,
+                text = "01 (238) 688 31 32",
+                onClick = { }
+            )
+            ContactItem(
+                icon = Icons.Filled.CheckCircle,
+                text = "01 (238) 104 80 04",
+                onClick = { }
+            )
+            ContactItem(
+                icon = Icons.Filled.LocationOn,
+                text = "Reforma Norte #444 Col. Centro\nC.P. 75700",
+                onClick = { }
+            )
+            ContactItem(
+                icon = Icons.Filled.Email,
+                text = "admisiones@unimilenium.edu.mx",
+                onClick = { }
+            )
+            ContactItem(
+                icon = Icons.Filled.Face,
+                text = "Centro Universitario Milenium",
+                onClick = { }
+            )
+            ContactItem(
+                icon = Icons.Filled.Clear,
+                text = "unimilenium",
+                onClick = { }
+            )
+        }
+    }
+}
+
+@Composable
+fun ContactItem(icon: ImageVector, text: String, onClick: () -> Unit) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .padding(vertical = 8.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = PurpleTheme.PrimaryPurple,
+            modifier = Modifier.size(32.dp)
+        )
+        Spacer(Modifier.width(16.dp))
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyLarge,
+            color = PurpleTheme.PrimaryDark
+        )
+    }
+}
+
+// =======================================
+// ====== NUEVAS PANTALLAS MEJORADAS =====
+// =======================================
+
+// ==================== PANTALLA PERFIL MEJORADA ====================
+@Composable
+fun SimpleProfileScreen(onBack: () -> Unit) {
+    // Lista de publicaciones específicas del perfil
+    val publications = remember {
+        mutableStateListOf(
+            Publication(
+                titulo = "Rafael",
+                descripcion = "Buen trabajo Pedro! Sigue trabajando en eso!",
+                timestamp = System.currentTimeMillis() - (2 * 60 * 60 * 1000)
+            ),
+            Publication(
+                titulo = "Milenium Oficial",
+                descripcion = "Repost by @Centro\n\ntexto de ejemplo xd",
+                timestamp = System.currentTimeMillis() - (3 * 60 * 60 * 1000)
+            )
+        )
+    }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(PurpleTheme.BackgroundPurple),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        item {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(PurpleTheme.LightPurpleGradient)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.Filled.ArrowBack,
+                            contentDescription = "Atrás",
+                            tint = PurpleTheme.PrimaryDark,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Rafael",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 32.sp,
+                                color = PurpleTheme.PrimaryDark
+                            )
+                            Text(
+                                text = "Pantera Osorio",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = PurpleTheme.TextPurple
+                            )
+                            Text(
+                                text = "Ing. Sistemas Informáticos e\nInteligencia Artificial",
+                                fontSize = 14.sp,
+                                color = PurpleTheme.TextPurple,
+                                lineHeight = 18.sp,
+                                modifier = Modifier.padding(vertical = 4.dp)
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text(
+                                text = "Redes",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = PurpleTheme.PrimaryDark
+                            )
+                        }
+
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(start = 16.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(100.dp)
+                                    .clip(CircleShape)
+                                    .border(2.dp, PurpleTheme.PrimaryLight, CircleShape)
+                                    .background(PurpleTheme.SurfacePurple),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.AccountCircle,
+                                    contentDescription = "Foto de perfil",
+                                    modifier = Modifier.size(80.dp),
+                                    tint = PurpleTheme.PrimaryPurple
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "${publications.size}",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 18.sp,
+                                color = PurpleTheme.PrimaryDark
+                            )
+                            Text(
+                                text = "Posts",
+                                fontSize = 12.sp,
+                                color = PurpleTheme.TextPurple
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Text(
+                    text = "BIOGRAFIA",
+                    modifier = Modifier.align(Alignment.CenterHorizontally),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = PurpleTheme.PrimaryPurple
+                )
+                Spacer(modifier = Modifier.height(10.dp))
+                Divider(color = PurpleTheme.PrimaryLight, thickness = 1.dp)
+            }
+        }
+
+        items(publications) { publication ->
+            PublicationCardModern(
+                publication = publication,
+                onDelete = {
+                    publications.remove(publication)
+                },
+                onLike = { liked ->
+                    val index = publications.indexOf(publication)
+                    if (index != -1) {
+                        val updatedPublication = publication.copy(isLiked = liked)
+                        publications[index] = updatedPublication
+                    }
+                }
+            )
+        }
+    }
+}
+
+// ==================== PANTALLA NOTIFICACIONES MEJORADA ====================
+@Composable
+fun NotificationScreenStyle(onBack: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(PurpleTheme.BackgroundPurple)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(PurpleTheme.PrimaryPurple)
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    Icons.Filled.ArrowBack,
+                    contentDescription = "Atrás",
+                    tint = Color.White
+                )
+            }
+
+            Text(
+                text = "Notificaciones",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+            Icon(
+                Icons.Filled.Search,
+                contentDescription = "Buscar",
+                tint = Color.White
+            )
+        }
+
+        LazyColumn(
+            modifier = Modifier.weight(1f)
+        ) {
+            items(3) { index ->
+                NotificationItemStyle(index)
+            }
+        }
+    }
+}
+
+@Composable
+fun NotificationItemStyle(index: Int) {
+    val names = listOf("Pedro", "Pedro", "Willmar")
+    val actions = listOf("Le dio me gusta", "Le dio me gusta", "@ Te mencionó")
+    val times = listOf("5 mins", "5 mins", "1 hr")
+    val isLike = index < 2
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp)
+            .background(PurpleTheme.SurfacePurple, RoundedCornerShape(8.dp))
+            .padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Filled.AccountCircle,
+            contentDescription = null,
+            modifier = Modifier.size(50.dp),
+            tint = PurpleTheme.PrimaryPurple
+        )
+
+        Spacer(modifier = Modifier.width(16.dp))
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = names.getOrElse(index) { "Usuario" },
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp,
+                color = PurpleTheme.PrimaryDark
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (isLike) {
+                    Icon(
+                        imageVector = Icons.Filled.Favorite,
+                        contentDescription = null,
+                        tint = PurpleTheme.PrimaryPurple,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                }
+                Text(
+                    text = actions.getOrElse(index) { "" },
+                    color = PurpleTheme.TextPurple,
+                    fontSize = 14.sp
+                )
+            }
+        }
+
+        Text(
+            text = times.getOrElse(index) { "" },
+            color = PurpleTheme.PrimaryPurple,
+            fontSize = 12.sp
+        )
+    }
+}
+
+// =======================================
 // ============= UTILITIES ===============
 // =======================================
 
@@ -1398,7 +2020,9 @@ private fun formatDate(timestamp: Long): String {
 @Preview(showBackground = true)
 @Composable
 fun HomeScreenPreview() {
-    MaterialTheme {
+    MaterialTheme(
+        colorScheme = PurpleColorScheme
+    ) {
         HomeScreen(navController = rememberNavController())
     }
 }
@@ -1406,7 +2030,9 @@ fun HomeScreenPreview() {
 @Preview(showBackground = true)
 @Composable
 fun CreateScreenPreview() {
-    MaterialTheme {
+    MaterialTheme(
+        colorScheme = PurpleColorScheme
+    ) {
         CreateScreen(
             navController = rememberNavController(),
             onNavigateBack = {}
@@ -1417,7 +2043,9 @@ fun CreateScreenPreview() {
 @Preview(showBackground = true)
 @Composable
 fun SearchScreenPreview() {
-    MaterialTheme {
+    MaterialTheme(
+        colorScheme = PurpleColorScheme
+    ) {
         SearchScreen(onNavigateBack = {})
     }
 }
@@ -1425,7 +2053,9 @@ fun SearchScreenPreview() {
 @Preview(showBackground = true)
 @Composable
 fun PublicationCardPreview() {
-    MaterialTheme {
+    MaterialTheme(
+        colorScheme = PurpleColorScheme
+    ) {
         PublicationCardModern(
             publication = Publication(
                 titulo = "Mi primera publicación",
@@ -1444,7 +2074,9 @@ fun PublicationCardPreview() {
 @Preview(showBackground = true)
 @Composable
 fun UserCardPreview() {
-    MaterialTheme {
+    MaterialTheme(
+        colorScheme = PurpleColorScheme
+    ) {
         UserCard(
             user = User(
                 id = 1,
@@ -1455,5 +2087,45 @@ fun UserCardPreview() {
                 intereses = listOf("Diseño", "Tecnología", "Arte")
             )
         )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ConfiguracionScreenPreview() {
+    MaterialTheme(
+        colorScheme = PurpleColorScheme
+    ) {
+        ConfiguracionScreen(navController = rememberNavController())
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun ContactanosScreenPreview() {
+    MaterialTheme(
+        colorScheme = PurpleColorScheme
+    ) {
+        ContactanosScreen(navController = rememberNavController())
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun SimpleProfileScreenPreview() {
+    MaterialTheme(
+        colorScheme = PurpleColorScheme
+    ) {
+        SimpleProfileScreen(onBack = {})
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun NotificationScreenStylePreview() {
+    MaterialTheme(
+        colorScheme = PurpleColorScheme
+    ) {
+        NotificationScreenStyle(onBack = {})
     }
 }
